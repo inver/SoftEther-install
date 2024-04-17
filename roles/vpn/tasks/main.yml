@@ -1,0 +1,125 @@
+---
+- name: Include common vars
+  include_vars:
+    file: "main.yml"
+- name: Include vars for os family
+  include_vars:
+    file: "{{ ansible_os_family }}.yml"
+
+- name: account $HOME
+  ansible.builtin.shell: "echo $HOME"
+  register: user_home
+  changed_when: false
+  check_mode: no
+- name: Install make
+  ansible.builtin.apt:
+    pkg:
+      - make
+      - gcc
+      - net-tools
+      - unzip
+    update_cache: yes
+  become: true
+- name: Download archive
+  ansible.builtin.get_url:
+    url: https://github.com/inver/softethervpn-web-console/releases/download/v0.0.1/softether-vpnserver-v4.42-9798-rtm-2023.06.30-linux-x64-64bit.tar.gz
+    dest: ~/vpnserver.tar.gz
+- name: Unarchive
+  ansible.builtin.unarchive:
+    src: ~/vpnserver.tar.gz
+    dest: ~/
+    remote_src: yes
+- name: Build vpn server
+  ansible.builtin.command:
+    cmd: make main
+    chdir: ~/vpnserver
+- name: Copy server to /usr/local
+  ansible.builtin.copy:
+    src: "{{ user_home.stdout }}/vpnserver"
+    dest: /usr/local
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+- name: Change permissions for all files
+  ansible.builtin.file:
+    path: /usr/local/vpnserver
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+- name: Change permissions for vpncmd
+  ansible.builtin.command:
+    cmd: chmod 700 vpncmd
+    chdir: /usr/local/vpnserver
+  become: true
+- name: Change permissions for vpnserver
+  ansible.builtin.command:
+    cmd: chmod 700 vpnserver
+    chdir: /usr/local/vpnserver
+  become: true
+- name: Check vpn server
+  ansible.builtin.command: /usr/local/vpnserver/vpncmd /TOOLS /CMD Check
+  become: true
+
+- name: Install startup script
+  ansible.builtin.copy:
+    src: files/vpnserver.sh
+    dest: /opt/vpnserver.sh
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Install service
+  ansible.builtin.copy:
+    src: files/vpnserver.service
+    dest: /etc/systemd/system/vpnserver.service
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Enable & start service
+  ansible.builtin.systemd_service:
+    name: vpnserver
+    state: started
+    enabled: true
+  become: true
+
+- name: Download archive with front
+  ansible.builtin.get_url:
+    url: https://github.com/inver/softethervpn-web-console/releases/download/v0.0.1/web-console-0.0.1.zip
+    dest: ~/web-console.zip
+- name: Unarchive web console
+  ansible.builtin.unarchive:
+    src: ~/web-console.zip
+    dest: ~/
+    remote_src: yes
+- name: Create directory for web console
+  ansible.builtin.file:
+    path: /usr/local/vpnserver/hamcore/wwwroot/admin/manager
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+- name: Copy web-console to directory
+  ansible.builtin.copy:
+    src: "{{ user_home.stdout }}/dist"
+    dest: /usr/local/vpnserver/hamcore/wwwroot/admin/manager
+    owner: root
+    group: root
+    mode: '0755'
+    remote_src: yes
+  become: true
+- name: Copy default page
+  ansible.builtin.copy:
+    src: files/index.html
+    dest: /usr/local/vpnserver/hamcore/wwwroot/
+    owner: root
+    group: root
+    mode: '0755'
+  become: true

@@ -1,0 +1,6 @@
+---
+# vars file for roles/vpn
+old_admin_pwd: ololo
+new_admin_pwd: ololo
+virtual_hub_name: VPN
+vpn_server_config_cmd: "/usr/local/vpnserver/vpncmd  localhost:443 /SERVER /PASSWORD:{{ old_admin_pwd }} /CMD "
