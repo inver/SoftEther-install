@@ -1,0 +1,6 @@
+- name: Download and install SoftEther vpn
+  hosts: vpn
+#  gather_facts: no
+  roles:
+    - vpn
+

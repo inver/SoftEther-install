@@ -108,7 +108,7 @@
   become: true
 - name: Copy web-console to directory
   ansible.builtin.copy:
-    src: "{{ user_home.stdout }}/dist"
+    src: "{{ user_home.stdout }}/dist/"
     dest: /usr/local/vpnserver/hamcore/wwwroot/admin/manager
     owner: root
     group: root
